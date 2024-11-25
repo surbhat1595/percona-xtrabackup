@@ -188,11 +188,15 @@ get_sources(){
 }
 
 get_system(){
-    if [ -f /etc/redhat-release ]; then
+    if [ -f /etc/redhat-release ] || [ -f /etc/amazon-linux-release ]; then
         GLIBC_VER_TMP="$(rpm glibc -qa --qf %{VERSION})"
-        export RHEL=$(rpm --eval %rhel)
+        export RHEL=$(rpm --eval "%{?rhel}%{?amzn}")
         export ARCH=$(echo $(uname -m) | sed -e 's:i686:i386:g')
-        export OS_NAME="el$RHEL"
+        if [ -f /etc/amazon-linux-release ]; then
+            export OS_NAME="amzn$RHEL"
+        else
+            export OS_NAME="el$RHEL"
+        fi
         export OS="rpm"
     else
         GLIBC_VER_TMP="$(dpkg-query -W -f='${Version}' libc6 | awk -F'-' '{print $1}')"
@@ -247,12 +251,12 @@ install_deps() {
             yum-config-manager --enable ol"${RHEL}"_codeready_builder
             yum -y install epel-release
         fi
-        if [ ${RHEL} = 8 -o ${RHEL} = 9 ]; then
+        if [[ "${RHEL}" = "8" || "${RHEL}" = "9" || "${RHEL}" = "2023" ]]; then
             PKGLIST+=" binutils-devel python3-pip python3-setuptools"
             PKGLIST+=" libcurl-devel cmake libaio-devel zlib-devel libev-devel bison make gcc"
             PKGLIST+=" rpm-build libgcrypt-devel ncurses-devel readline-devel openssl-devel gcc-c++"
             PKGLIST+=" vim-common rpmlint patchelf python3-wheel libudev-devel"
-            if [ $RHEL = 9 ]; then
+            if [[ "${RHEL}" = "9" || "${RHEL}" = "2023" ]]; then
                 PKGLIST+=" rsync python3-sphinx dnf-utils"
             else
                 if [ x"$ARCH" = "xx86_64" ]; then
@@ -500,7 +504,7 @@ build_rpm(){
 
     enable_venv
 
-    rpmbuild --define "_topdir ${WORKDIR}/rpmbuild" --define "dist .el${RHEL}" --rebuild rpmbuild/SRPMS/${SRCRPM}
+    rpmbuild --define "_topdir ${WORKDIR}/rpmbuild" --define "dist .${OS_NAME}" --rebuild rpmbuild/SRPMS/${SRCRPM}
     return_code=$?
     if [ $return_code != 0 ]; then
         exit $return_code

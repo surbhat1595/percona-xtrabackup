@@ -23,7 +23,7 @@ URL:            http://www.percona.com/software/percona-xtrabackup
 Source:         percona-xtrabackup-%{version}%{xb_version_extra}.tar.gz
 
 BuildRequires:  %{cmake_bin}, libaio-devel, libgcrypt-devel, ncurses-devel, readline-devel, zlib-devel, libev-devel openssl-devel
-%if 0%{?rhel} > 5
+%if 0%{?rhel} > 5 || 0%{?amzn} >= 2023
 BuildRequires:  libcurl-devel
 %else
 BuildRequires:  curl-devel
@@ -77,14 +77,14 @@ sed -i 's:#!/usr/bin/env python:#!/usr/bin/env python2:g' storage/innobase/xtrab
 sed -i 's:#!/usr/bin/env python:#!/usr/bin/env python2:g' storage/innobase/xtrabackup/test/python/subunit/run.py
 %endif
 #
-%if 0%{?rhel} == 9
+%if 0%{?rhel} == 9 || 0%{?amzn} >= 2023
 sed -i 's:#!/usr/bin/env python:#!/usr/bin/env python3:g' storage/innobase/xtrabackup/test/subunit2junitxml
 sed -i 's:#!/usr/bin/env python:#!/usr/bin/env python3:g' storage/innobase/xtrabackup/test/python/subunit/tests/sample-two-script.py
 sed -i 's:#!/usr/bin/env python:#!/usr/bin/env python3:g' storage/innobase/xtrabackup/test/python/subunit/tests/sample-script.py
 sed -i 's:#!/usr/bin/env python:#!/usr/bin/env python3:g' storage/innobase/xtrabackup/test/python/subunit/run.py
 %endif
 #
-%if 0%{?rhel} > 5
+%if 0%{?rhel} > 5 || 0%{?amzn} >= 2023
   %{cmake_bin} . -DBUILD_CONFIG=xtrabackup_release -DCMAKE_INSTALL_PREFIX=%{_prefix} \
   -DWITH_SSL=system -DDOWNLOAD_BOOST=1 -DWITH_BOOST=libboost \
   -DINSTALL_MYSQLTESTDIR=%{_datadir}/percona-xtrabackup-test-%{xb_version_major}%{xb_version_minor} \
