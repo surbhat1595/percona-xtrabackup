@@ -198,11 +198,15 @@ get_sources(){
 }
 
 get_system(){
-    if [ -f /etc/redhat-release ]; then
+    if [ -f /etc/redhat-release ] || [ -f /etc/amazon-linux-release ]; then
         GLIBC_VER_TMP="$(rpm glibc -qa --qf %{VERSION})"
-        export RHEL=$(rpm --eval %rhel)
+        export RHEL=$(rpm --eval "%{?rhel}%{?amzn}")
         export ARCH=$(echo $(uname -m) | sed -e 's:i686:i386:g')
-        export OS_NAME="el$RHEL"
+        if [ -f /etc/amazon-linux-release ]; then
+            export OS_NAME="amzn$RHEL"
+        else
+            export OS_NAME="el$RHEL"
+        fi
         export OS="rpm"
     else
         GLIBC_VER_TMP="$(dpkg-query -W -f='${Version}' libc6 | awk -F'-' '{print $1}')"
@@ -247,7 +251,8 @@ install_deps() {
         if [ $RHEL = 7 ]; then
             switch_to_vault_repo
         fi
-        yum -y install git wget yum-utils curl
+        yum -y install git wget yum-utils
+        yum -y install curl
         yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
         if [ x"$ARCH" = "xx86_64" ]; then
             if [ $RHEL = 9 ]; then
@@ -262,12 +267,12 @@ install_deps() {
             yum-config-manager --enable ol"${RHEL}"_codeready_builder
             yum -y install epel-release
         fi
-        if [ ${RHEL} = 8 -o ${RHEL} = 9 ]; then
+        if [[ "${RHEL}" = "8" || "${RHEL}" = "9" || "${RHEL}" = "2023" ]]; then
             PKGLIST+=" binutils-devel python3-pip python3-setuptools"
             PKGLIST+=" libcurl-devel cmake libaio-devel zlib-devel libev-devel bison make"
             PKGLIST+=" rpm-build libgcrypt-devel ncurses-devel readline-devel openssl-devel"
             PKGLIST+=" vim-common rpmlint patchelf python3-wheel libudev-devel"
-            if [ $RHEL = 9 ]; then
+            if [[ "${RHEL}" = "9" || "${RHEL}" = "2023" ]]; then
                 PKGLIST+=" rsync procps-ng-devel python3-sphinx gcc gcc-c++"
             else
                 if [ x"$ARCH" = "xx86_64" ]; then
@@ -550,9 +555,9 @@ build_rpm(){
 
     enable_venv
     if [[ "x${FIPSMODE}" == "x1" ]]; then
-        rpmbuild --define "_topdir ${WORKDIR}/rpmbuild" --define "dist .el${RHEL}" --define "enable_fipsmode 1" --rebuild rpmbuild/SRPMS/${SRCRPM}
+        rpmbuild --define "_topdir ${WORKDIR}/rpmbuild" --define "dist .${OS_NAME}" --define "enable_fipsmode 1" --rebuild rpmbuild/SRPMS/${SRCRPM}
     else
-        rpmbuild --define "_topdir ${WORKDIR}/rpmbuild" --define "dist .el${RHEL}" --rebuild rpmbuild/SRPMS/${SRCRPM}
+        rpmbuild --define "_topdir ${WORKDIR}/rpmbuild" --define "dist .${OS_NAME}" --rebuild rpmbuild/SRPMS/${SRCRPM}
     fi
     return_code=$?
     if [ $return_code != 0 ]; then
